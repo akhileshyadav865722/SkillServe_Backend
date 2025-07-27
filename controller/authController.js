@@ -64,3 +64,31 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ msg: 'Server error' });
   }
 };
+// controllers/authController.js
+
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const token = req.header('Authorization');
+
+    if (!token) {
+      return res.status(401).json({ msg: 'No token, authorization denied' });
+    }
+
+    // Remove "Bearer " if present
+    const cleanToken = token.replace('Bearer ', '');
+
+    const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id).select('-password'); // exclude password
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    res.json(user);
+  } catch (err) {
+    console.error('Profile fetch error:', err);
+    res.status(401).json({ msg: 'Token is not valid' });
+  }
+};
