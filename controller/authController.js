@@ -69,18 +69,7 @@ exports.loginUser = async (req, res) => {
 
 exports.getUserProfile = async (req, res) => {
   try {
-    const token = req.header('Authorization');
-
-    if (!token) {
-      return res.status(401).json({ msg: 'No token, authorization denied' });
-    }
-
-    // Remove "Bearer " if present
-    const cleanToken = token.replace('Bearer ', '');
-
-    const decoded = jwt.verify(cleanToken, process.env.JWT_SECRET);
-
-    const user = await User.findById(decoded.id).select('-password'); // exclude password
+    const user = await User.findById(req.user.id).select('-password');
 
     if (!user) {
       return res.status(404).json({ msg: 'User not found' });
@@ -89,6 +78,40 @@ exports.getUserProfile = async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error('Profile fetch error:', err);
-    res.status(401).json({ msg: 'Token is not valid' });
+    res.status(500).json({ msg: 'Server error' });
   }
 };
+
+
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const updates = {
+      name: req.body.name,
+      phone: req.body.phone,
+      profilePicture: req.body.profilePicture,
+      role: req.body.role,
+      description: req.body.description,
+      occupation: req.body.occupation,
+      experience: req.body.experience,
+      rating: req.body.rating,
+    };
+
+    Object.keys(updates).forEach((key) => updates[key] === undefined && delete updates[key]);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!updatedUser) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    res.status(200).json(updatedUser);
+  } catch (err) {
+    console.error('Update profile error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+};
+
